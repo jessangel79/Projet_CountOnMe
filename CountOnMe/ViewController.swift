@@ -39,7 +39,6 @@ class ViewController: UIViewController {
         // Do any additional setup after loading the view.
     }
     
-    
     // View actions
     @IBAction func tappedNumberButton(_ sender: UIButton) {
         guard let numberText = sender.title(for: .normal) else {
@@ -57,7 +56,9 @@ class ViewController: UIViewController {
         if canAddOperator {
             textView.text.append(" + ")
         } else {
-            let alertVC = UIAlertController(title: "Zéro!", message: "Un operateur est déja mis !", preferredStyle: .alert)
+            let alertVC = UIAlertController(title: "Zéro!",
+                                            message: "Un operateur est déja mis !",
+                                            preferredStyle: .alert)
             alertVC.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
             self.present(alertVC, animated: true, completion: nil)
         }
@@ -67,7 +68,9 @@ class ViewController: UIViewController {
         if canAddOperator {
             textView.text.append(" - ")
         } else {
-            let alertVC = UIAlertController(title: "Zéro!", message: "Un operateur est déja mis !", preferredStyle: .alert)
+            let alertVC = UIAlertController(title: "Zéro!",
+                                            message: "Un operateur est déja mis !",
+                                            preferredStyle: .alert)
             alertVC.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
             self.present(alertVC, animated: true, completion: nil)
         }
@@ -75,13 +78,17 @@ class ViewController: UIViewController {
 
     @IBAction func tappedEqualButton(_ sender: UIButton) {
         guard expressionIsCorrect else {
-            let alertVC = UIAlertController(title: "Zéro!", message: "Entrez une expression correcte !", preferredStyle: .alert)
+            let alertVC = UIAlertController(title: "Zéro!",
+                                            message: "Entrez une expression correcte !",
+                                            preferredStyle: .alert)
             alertVC.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
             return self.present(alertVC, animated: true, completion: nil)
         }
         
         guard expressionHaveEnoughElement else {
-            let alertVC = UIAlertController(title: "Zéro!", message: "Démarrez un nouveau calcul !", preferredStyle: .alert)
+            let alertVC = UIAlertController(title: "Zéro!",
+                                            message: "Démarrez un nouveau calcul !",
+                                            preferredStyle: .alert)
             alertVC.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
             return self.present(alertVC, animated: true, completion: nil)
         }
@@ -91,9 +98,11 @@ class ViewController: UIViewController {
         
         // Iterate over operations while an operand still here
         while operationsToReduce.count > 1 {
-            let left = Int(operationsToReduce[0])!
+//            let left = Int(operationsToReduce[0])!
+            guard let left = Int(operationsToReduce[0]) else { return }
             let operand = operationsToReduce[1]
-            let right = Int(operationsToReduce[2])!
+//            let right = Int(operationsToReduce[2])!
+            guard let right = Int(operationsToReduce[2]) else { return }
             
             let result: Int
             switch operand {
@@ -110,4 +119,3 @@ class ViewController: UIViewController {
     }
 
 }
-
