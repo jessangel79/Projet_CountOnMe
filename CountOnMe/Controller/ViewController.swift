@@ -17,37 +17,54 @@ class ViewController: UIViewController {
     // MARK: - Properties
     var calc = Calculator()
     
-//    var elements: [String] {
-//        return textView.text.split(separator: " ").map { "\($0)" }
-//    }
-    
-//    // Error check computed variables
-//    var expressionIsCorrect: Bool {
-//        return elements.last != "+" && elements.last != "-"
-//    }
-    
-//    var expressionHaveEnoughElement: Bool {
-//        return elements.count >= 3
-//    }
-//
-//    var canAddOperator: Bool {
-//        return elements.last != "+" && elements.last != "-"
-//    }
-    
-//    var expressionHaveResult: Bool {
-//        return textView.text.firstIndex(of: "=") != nil
-//    }
-    
     // MARK: - Methods
     // View Life cycles
     override func viewDidLoad() {
         super.viewDidLoad()
-        let name = Notification.Name(rawValue: "ResultCalculate")
-        NotificationCenter.default.addObserver(self, selector: #selector(resultCalculate), name: name, object: nil)
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(alertErrorOperator),
+                                               name: Notification.Name(rawValue: "AlertErrorOperator"),
+                                               object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(alertErrorExpressionIncorrect),
+                                               name: Notification.Name(rawValue: "AlertErrorExpressionIncorrect"),
+                                               object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(alertErrorNewCalcul),
+                                               name: Notification.Name(rawValue: "AlertErrorNewCalcul"),
+                                               object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(alertDivideByZeroImpossible),
+                                               name: Notification.Name(rawValue: "AlertDivideByZeroImpossible"),
+                                               object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(alertErrorArrayEmpty),
+                                               name: Notification.Name(rawValue: "AlertErrorArrayEmpty"),
+                                               object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(displayCalc(notification:)),
+                                               name: Notification.Name(rawValue: "DisplayCalc"),
+                                               object: nil)
     }
     
-    @objc func resultCalculate() {
-        textView.text = calc.calcul
+    @objc func alertErrorOperator() {
+        alertVC(title: "Zéro", message: "Un operateur est déja mis !")
+    }
+    
+    @objc func alertErrorExpressionIncorrect() {
+        alertVC(title: "Zéro", message: "Entrez une expression correcte !")
+    }
+    
+    @objc func alertErrorNewCalcul() {
+        alertVC(title: "Zéro", message: "Démarrez un nouveau calcul !")
+    }
+    
+    @objc func alertDivideByZeroImpossible() {
+        alertVC(title: "Zéro", message: "La division par zéro est impossible !")
+    }
+    
+    @objc func alertErrorArrayEmpty() {
+        alertVC(title: "Zéro", message: "Veuillez saisir un chiffre !")
+    }
+    
+    @objc func displayCalc(notification: Notification) {
+        guard let userInfo = notification.userInfo else { return }
+        textView.text = userInfo["calcul"] as? String
     }
     
     // MARK: - Actions
@@ -57,49 +74,32 @@ class ViewController: UIViewController {
             return
         }
         calc.addNewNumber(stringNumber: numberText)
-        textView.text = calc.displayCalc()
     }
     
     @IBAction func tappedAdditionButton(_ sender: UIButton) {
-        if calc.canAddOperator {
-            calc.addition()
-            textView.text = calc.displayCalc()
-        } else {
-            alertVC(alertError: .operatorAlreadySet)
-        }
+        calc.operation(operand: .addition)
     }
     
     @IBAction func tappedSubstractionButton(_ sender: UIButton) {
-        if calc.canAddOperator {
-            calc.substraction()
-            textView.text = calc.displayCalc()
-        } else {
-            alertVC(alertError: .operatorAlreadySet)
-        }
-    }
-
-    @IBAction func tappedEqualButton(_ sender: UIButton) {
-        guard calc.expressionIsCorrect else {
-            return alertVC(alertError: .incorrectExpression)
-        }
-        
-        guard calc.expressionHaveEnoughElement else {
-            return alertVC(alertError: .newCalc)
-        }
-        
-        calc.calculate()
+        calc.operation(operand: .subtraction)
     }
     
-    private func alertVC(alertError: Calculator.AlertError) {
-        let alertVC = UIAlertController(title: alertError.title, message: alertError.message, preferredStyle: .alert)
+    @IBAction func tappedMultiplicationButton(_ sender: UIButton) {
+        calc.operation(operand: .multiplication)
+    }
+    
+    @IBAction func tappedDivisionButton(_ sender: UIButton) {
+        calc.operation(operand: .division)
+    }
+    
+    @IBAction func tappedEqualButton(_ sender: UIButton) {
+        calc.calculate()
+    }
+
+    private func alertVC(title: String, message: String) {
+        let alertVC = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alertVC.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
         self.present(alertVC, animated: true, completion: nil)
     }
-
-//    private func alertVC(title: String, message: String) {
-//        let alertVC = UIAlertController(title: title, message: message, preferredStyle: .alert)
-//        alertVC.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
-//        self.present(alertVC, animated: true, completion: nil)
-//    }
 
 }

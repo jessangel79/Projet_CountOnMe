@@ -16,6 +16,8 @@ class Calculator {
     var calcul: String = "1 + 1 = 2" {
         didSet {
             print(calcul)
+            let name = Notification.Name(rawValue: "DisplayCalc")
+            NotificationCenter.default.post(name: name, object: nil, userInfo: ["calcul": calcul])
         }
     }
     
@@ -25,7 +27,7 @@ class Calculator {
     
     // Error check computed variables
     var expressionIsCorrect: Bool {
-        return elements.last != "+" && elements.last != "-"
+        return elements.last != "+" && elements.last != "-" && elements.last != "x" && elements.last != "/"
     }
     
     var expressionHaveEnoughElement: Bool {
@@ -33,99 +35,153 @@ class Calculator {
     }
     
     var canAddOperator: Bool {
-        return elements.last != "+" && elements.last != "-"
+        return elements.last != "+" && elements.last != "-" && elements.last != "x" && elements.last != "/"
     }
     
     var expressionHaveResult: Bool {
         return calcul.firstIndex(of: "=") != nil
     }
     
-    enum AlertError: Error {
-        case newCalc, operatorAlreadySet, incorrectExpression
-
-        var title: String {
-            return "Zéro"
-        }
-
-        var message: String {
-            switch self {
-            case .newCalc:
-                return "Démarrez un nouveau calcul !"
-            case .operatorAlreadySet:
-                return "Un operateur est déja mis !"
-            case .incorrectExpression:
-                return "Entrez une expression correcte !"
-            }
-        }
+    // Check if a number has been entered
+    var arrayIsEmpty: Bool {
+        return elements.count == 0
     }
     
+    // Check division by zero
+    var expressionDivisionByZero: Bool {
+        return (elements.firstIndex(of: "/") != nil) && elements.contains("0")
+    }
+
+    // Check priority for multiplication and division
+    var priorityOperator: Bool {
+        return (elements.firstIndex(of: "x") != nil) || (elements.firstIndex(of: "/") != nil)
+    }
+    
+    // Enum Error type
+    enum ErrorType: String {
+        case newCalcul = "AlertErrorNewCalcul"
+        case incorrectExpression = "AlertErrorExpressionIncorrect"
+        case errorOperator = "AlertErrorOperator"
+        case divideByZero = "AlertDivideByZeroImpossible"
+        case errorArrayEmpty = "AlertErrorArrayEmpty"
+    }
+    
+    // Enum Operand to function calculation(operand: Operand)
+    enum Operand: String {
+        case addition = " + "
+        case subtraction = " - "
+        case multiplication = " x "
+        case division = " / "
+    }
+
     // MARK: - Methods
-    func notificationSending() {
-        let name = Notification.Name(rawValue: "ResultCalculate")
-        let notification = Notification(name: name)
-        NotificationCenter.default.post(notification)
+    func notificationSending(typeError: ErrorType) {
+        let name = Notification.Name(rawValue: typeError.rawValue)
+        NotificationCenter.default.post(Notification(name: name))
     }
     
     func addNewNumber(stringNumber: String) {
-        if expressionHaveResult {
-            calcul = ""
-        }
+        refreshCalc()
         calcul.append(stringNumber)
     }
     
-    func addition() {
-        calcul.append(" + ")
+    func operation(operand: Operand) {
+        refreshCalc()
+        if arrayIsEmpty {
+            notificationSending(typeError: ErrorType.errorArrayEmpty)
+        } else if canAddOperator {
+            calcul.append(operand.rawValue)
+        } else {
+            notificationSending(typeError: ErrorType.errorOperator)
+        }
     }
     
-    func substraction() {
-        calcul.append(" - ")
-    }
-    
-    func multiplication() {
-        calcul.append(" x ")
-    }
-    
-    func division() {
-        calcul.append(" / ")
+    // Multiplication and division
+    func priority(expression: [String]) -> [String] {
+        var tempExpression: [String] = expression
+        while tempExpression.contains("x") || tempExpression.contains("/") {
+            if let indexTempExpression = tempExpression.firstIndex(where: {$0 == "x" || $0 == "/"}) {
+                let operand = tempExpression[indexTempExpression]
+                guard let leftNumber = Double(tempExpression[indexTempExpression - 1]) else { return [] }
+                guard let rightNumber = Double(tempExpression[indexTempExpression + 1]) else { return [] }
+                let result: Double
+                if operand == "x" {
+                    result = leftNumber * rightNumber
+                } else {
+                    result = leftNumber / rightNumber
+                }
+                tempExpression[indexTempExpression - 1] = String(removeDotZero(result: result))
+                tempExpression.remove(at: indexTempExpression + 1)
+                tempExpression.remove(at: indexTempExpression)
+            }
+        }
+        return tempExpression
     }
     
     func calculate() {
         
+        guard expressionIsCorrect else {
+            notificationSending(typeError: ErrorType.incorrectExpression)
+            return
+        }
+        
+        guard expressionHaveEnoughElement else {
+            notificationSending(typeError: ErrorType.newCalcul)
+            return
+        }
+        
+        // Division by zero
+        guard !expressionDivisionByZero else {
+            notificationSending(typeError: ErrorType.divideByZero)
+            calcul = String()
+            return
+        }
+        
         // Create local copy of operations
         var operationsToReduce = elements
         
+        // Mutiplication & division priority
+        if priorityOperator {
+            operationsToReduce = priority(expression: elements)
+        }
+        
         // Iterate over operations while an operand still here
         while operationsToReduce.count > 1 {
-            let left = Int(operationsToReduce[0])!
-            let operand = operationsToReduce[1]
-            let right = Int(operationsToReduce[2])!
             
-            let result: Int
+            guard let left = Double(operationsToReduce[0]) else { return }
+            let operand = operationsToReduce[1]
+            guard let right = Double(operationsToReduce[2]) else { return }
+
+            var result: Double = 0.0
             switch operand {
             case "+": result = left + right
             case "-": result = left - right
-            default: fatalError("Unknown operator !")
+            default: notificationSending(typeError: ErrorType.incorrectExpression)
             }
-            
             operationsToReduce = Array(operationsToReduce.dropFirst(3))
-            operationsToReduce.insert("\(result)", at: 0)
+            operationsToReduce.insert("\(removeDotZero(result: result))", at: 0)
         }
         guard let result = operationsToReduce.first else { return }
         calcul.append(" = \(result)")
-        notificationSending()
     }
     
+    // reset property "calcul"
+    private func refreshCalc() {
+        if expressionHaveResult {
+            calcul = String()
+        }
+    }
+    
+    // display the calcul input by the user
     func displayCalc() -> String {
         let text = calcul
         return text
     }
     
-//    func displayCalc() -> String {
-//        var text = ""
-//        for element in elements {
-//            text = element
-//        }
-//        return text
-//    }
-    
-}
+    // remove dot and zero to display an integer
+    func removeDotZero(result: Double) -> String {
+        let doubleAsString = NumberFormatter.localizedString(from: (NSNumber(value: result)), number: .decimal)
+        return doubleAsString
+    }
+
+} // END class Calculator
